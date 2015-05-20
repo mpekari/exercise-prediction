@@ -1,86 +1,92 @@
 ---
-title: "exercisePrediction.Rmd"
+title: Using Classification and Regression Trees(CART) to fit a prediction model for exercise data
 author: "Tinniam V Ganesh"
 date: "Wednesday, May 20, 2015"
 output: html_document
 ---
 # Executive Summary 
-This project performs a logistic model fit of the exercise measurements taken from wearables. 
+This project uses the Classification and Regression Trees (CART)  to model classify the outcome variable based on the set of predictors. The data is read and then cleaned to remove all columns which have >97% of
+NAs or space character. Then the CART model is used to classify the outcome based on the predictors.
+ 
 
-Read the data
+Read the data from the CSV files. Create a vector of NA strings that include both blank spaces and
+NAs
 ```{r}
 library(dplyr)
 library(caret)
 library(rattle)
 library(rpart.plot)
-training <- read.csv("pml-training.csv",stringsAsFactors=FALSE)
-testing <- read.csv("pml-testing.csv",stringsAsFactors=FALSE)
+training <- read.csv("pml-training.csv",na.strings = c(NA,""))
+testing <- read.csv("pml-testing.csv",na.strings = c(NA,""))
 ```
 
-#Explore the data
+# Explore the data
 ```{r}
 # Check the column names
 str(training)
 ```
 
-# Clean the data. Remove columns which have a NAs or empty spaces for most rows. Select all columns for which all rows (16922) have valid values.
+## Clean the data. Remove columns which have a NAs or empty spaces for most rows. Remove  all columns for which colMeans(is.na(training)) < .97
 
 ```{r cache=TRUE}
-col <- NULL
-for( i in 1: length(names(training))){
-   a <- training[,i] != "" & !is.na(training[,i])
-   b <- sum(a)
-   
-   #Check if the number of values in column is complete
-   if(b == nrow(training) ) {
-      col <- c(col,i)
-   }
-  
-}
-# Subset all colums which have data
-train <- select(training,col)
+a <- colMeans(is.na(training)) < .97
 ```
 
+# Subset the training and testing data with the columns for which colMeans > .97
+```{r}
+train <- training[, a]
+test <- testing[,a]
+```
+
+# Drop irrelevant columns from training and test
 ## Drop all columns that don't have relevance to the outcome
 ```{r cache=TRUE}
-#Drop columns that don't have relevance
-train <-select(train, -new_window)
+# Drop columns that don't have relevance from the training set
+train <- select(train, -X)
 train <- select(train, -user_name)
 train <- select(train, -cvtd_timestamp)
-train <- select(train, -X)
-train <- select(train,-raw_timestamp_part_1)
-train <- select(train,-raw_timestamp_part_2)
-train <- select(train,-contains("total"))
+train <-select(train, -new_window)
 train <- select(train,-num_window)
+
+# Drop columns that don't have relevance from the testing set
+test <- select(test, -X)
+test <- select(test, -user_name)
+test <- select(test, -cvtd_timestamp)
+test <-select(test, -new_window)
+test <- select(test,-num_window)
+
 
 ```
 
 
-# Normalize all the variables 
+# Normalize all the train and test 
 Subtract the Mean and divide by the Standard Deviation
 ``` {r cache=TRUE}
-# Mean center and divide by SD to normalize all columns
+# Training set
 value <- length(names(train)) -1
 for( i in 1: value ){
   train[,i] <- (train[,i] - mean(train[,i]))/sd(train[,i])
 }
+
+# Testing set
+value <- length(names(test)) -1
+for( i in 1: value ){
+  test[,i] <- (test[,i] - mean(test[,i]))/sd(test[,i])
+}
 ```
 
-# Convert the outcome 'classe' variable to a factor
-```{r cache=TRUE}
-train$classe <- as.factor(train$classe)
-```
 
-
-#  See the details of the train set
+#  Explore the details of the train set and test set. 
+It can be seen that there are 54 predictors and a factor outcome classe
 ```{r}
 dim(train)
+dim(test)
 ```
 
-# Use logistic regression to make the prediction for the training set
+# Use CART classification &  regression to make the prediction for the training set
 ```{r cache=TRUE}
 modFit <- train(classe ~ ., method="rpart",data= train)
-#summary(modFit)
+modFit
 ```
 
 # Plot the classification with plot and fancyRpartPlot
@@ -94,19 +100,6 @@ text(modFit$finalModel,use.n=TRUE,all=TRUE,cex=0.8)
 fancyRpartPlot(modFit$finalModel)
 ```
 
-# Subset the same columns and remove irrelevant columns  from the test set
-```{r cache=TRUE}
-test <- select(testing,col)
-
-test <-select(test, -new_window)
-test <- select(test, -user_name)
-test <- select(test, -cvtd_timestamp)
-test <- select(test, -X)
-test <- select(test,-raw_timestamp_part_1)
-test <- select(test,-raw_timestamp_part_2)
-test <- select(test,-contains("total"))
-test <- select(test,-num_window)
-```
 
 # Predict with the test set
 ```{r cache=TRUE}

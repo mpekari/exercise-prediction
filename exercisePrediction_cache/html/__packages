@@ -3,6 +3,6 @@ dplyr
 lattice
 ggplot2
 caret
+rattle
 rpart
 rpart.plot
-rattle
