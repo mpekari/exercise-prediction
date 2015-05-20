@@ -1,0 +1,128 @@
+---
+title: "exercisePrediction.Rmd"
+author: "Tinniam V Ganesh"
+date: "Wednesday, May 20, 2015"
+output: html_document
+---
+# Executive Summary 
+This project performs a logistic model fit of the exercise measurements taken from wearables. 
+
+Read the data
+```{r}
+library(dplyr)
+library(caret)
+library(rattle)
+library(rpart.plot)
+training <- read.csv("pml-training.csv",stringsAsFactors=FALSE)
+testing <- read.csv("pml-testing.csv",stringsAsFactors=FALSE)
+```
+
+#Explore the data
+```{r}
+# Check the column names
+str(training)
+```
+
+# Clean the data. Remove columns which have a NAs or empty spaces for most rows. Select all columns for which all rows (16922) have valid values.
+
+```{r cache=TRUE}
+col <- NULL
+for( i in 1: length(names(training))){
+   a <- training[,i] != "" & !is.na(training[,i])
+   b <- sum(a)
+   
+   #Check if the number of values in column is complete
+   if(b == nrow(training) ) {
+      col <- c(col,i)
+   }
+  
+}
+# Subset all colums which have data
+train <- select(training,col)
+```
+
+## Drop all columns that don't have relevance to the outcome
+```{r cache=TRUE}
+#Drop columns that don't have relevance
+train <-select(train, -new_window)
+train <- select(train, -user_name)
+train <- select(train, -cvtd_timestamp)
+train <- select(train, -X)
+train <- select(train,-raw_timestamp_part_1)
+train <- select(train,-raw_timestamp_part_2)
+train <- select(train,-contains("total"))
+train <- select(train,-num_window)
+
+```
+
+
+# Normalize all the variables 
+Subtract the Mean and divide by the Standard Deviation
+``` {r cache=TRUE}
+# Mean center and divide by SD to normalize all columns
+value <- length(names(train)) -1
+for( i in 1: value ){
+  train[,i] <- (train[,i] - mean(train[,i]))/sd(train[,i])
+}
+```
+
+# Convert the outcome 'classe' variable to a factor
+```{r cache=TRUE}
+train$classe <- as.factor(train$classe)
+```
+
+
+#  See the details of the train set
+```{r}
+dim(train)
+```
+
+# Use logistic regression to make the prediction for the training set
+```{r cache=TRUE}
+modFit <- train(classe ~ ., method="rpart",data= train)
+#summary(modFit)
+```
+
+# Plot the classification with plot and fancyRpartPlot
+```{r classfication-chart, cache=TRUE}
+plot(modFit$finalModel,uniform=TRUE,main='Classification based on exercises') 
+text(modFit$finalModel,use.n=TRUE,all=TRUE,cex=0.8)
+```
+
+```{r classification-fancy, cache=TRUE}
+# Use the fancy Rpart plot for a better visualization of the classification
+fancyRpartPlot(modFit$finalModel)
+```
+
+# Subset the same columns and remove irrelevant columns  from the test set
+```{r cache=TRUE}
+test <- select(testing,col)
+
+test <-select(test, -new_window)
+test <- select(test, -user_name)
+test <- select(test, -cvtd_timestamp)
+test <- select(test, -X)
+test <- select(test,-raw_timestamp_part_1)
+test <- select(test,-raw_timestamp_part_2)
+test <- select(test,-contains("total"))
+test <- select(test,-num_window)
+```
+
+# Predict with the test set
+```{r cache=TRUE}
+predictions <- predict(modFit,newdata=test)
+predictions
+
+```
+
+# Conclusion: 
+1. The training and the test set data were read from the CSV files
+2. The data was cleaned based on the following criteria 
+   a. For columns which have blanks remove elements. 
+   b. For columns for which there are NA values remove the elements
+   c. Remove all irrelevant columns e.g user_name, run_window which don't contribute to the outcome
+3. A classification CART model was used for the outcone 'classe' variable
+4. After cleaning the total number of predictors is 48
+5. A classification chart and a fancy Rpart plot is created
+6. The testing set is also cleaned like the training set
+7. Finally the predictions for the test set is computed and shown
