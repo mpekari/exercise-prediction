@@ -1,21 +1,22 @@
 ---
-title: Using Classification and Regression Trees(CART) to fit a prediction model for exercise data
+title: Choosing Generalized Boosted Regression Model(GBM) over CART to fit a prediction model for exercise data
 author: "Tinniam V Ganesh"
 date: "Wednesday, May 20, 2015"
 output: html_document
 ---
 # Executive Summary 
-This project uses the Classification and Regression Trees (CART)  to model classify the outcome variable based on the set of predictors. The data is read and then cleaned to remove all columns which have >97% of
-NAs or space character. Then the CART model is used to classify the outcome based on the predictors.
- 
+This project uses the Generalized Boosted Regression Model(GBM) over CART  to model classify the outcome variable based on the set of predictors. The data is read and then cleaned to remove all columns which have >97% of NAs or space character.The GBM model is used to classify the outcome based on the predictors.
+The training data is divided into 3 folds for cross validation. The predicted model is checked for accuracy using the Confusion Matrix. The final prediction for the test set is done with the GBM model
 
 Read the data from the CSV files. Create a vector of NA strings that include both blank spaces and
 NAs
 ```{r}
+library(plyr)
 library(dplyr)
 library(caret)
 library(rattle)
 library(rpart.plot)
+library(gbm)
 training <- read.csv("pml-training.csv",na.strings = c(NA,""))
 testing <- read.csv("pml-testing.csv",na.strings = c(NA,""))
 ```
@@ -23,7 +24,7 @@ testing <- read.csv("pml-testing.csv",na.strings = c(NA,""))
 # Explore the data
 ```{r}
 # Check the column names
-str(training)
+names(training)
 ```
 
 ## Clean the data. Remove columns which have a NAs or empty spaces for most rows. Remove  all columns for which colMeans(is.na(training)) < .97
@@ -33,7 +34,7 @@ a <- colMeans(is.na(training)) < .97
 ```
 
 # Subset the training and testing data with the columns for which colMeans > .97
-```{r}
+```{r cache=TRUE}
 train <- training[, a]
 test <- testing[,a]
 ```
@@ -65,12 +66,14 @@ Subtract the Mean and divide by the Standard Deviation
 # Training set
 value <- length(names(train)) -1
 for( i in 1: value ){
+  train[,i] <- as.numeric(train[,i])
   train[,i] <- (train[,i] - mean(train[,i]))/sd(train[,i])
 }
 
 # Testing set
 value <- length(names(test)) -1
 for( i in 1: value ){
+  test[,i] <- as.numeric(test[,i])
   test[,i] <- (test[,i] - mean(test[,i]))/sd(test[,i])
 }
 ```
@@ -83,30 +86,62 @@ dim(train)
 dim(test)
 ```
 
+# Create K-folds where K=3
+```{r cache=TRUE}
+# Create 3 folds for cross validation
+folds <- createFolds(train$classe,3)
+str(folds)
+
+# Split up the data
+split <- lapply(folds, function(ind, dat) dat[ind,], dat = train)
+```
+
 # Use CART classification &  regression to make the prediction for the training set
 ```{r cache=TRUE}
-modFit <- train(classe ~ ., method="rpart",data= train)
-modFit
+modRpart <- train(classe ~ ., method="rpart",data= train)
+modRpart
 ```
 
 # Plot the classification with plot and fancyRpartPlot
 ```{r classfication-chart, cache=TRUE}
-plot(modFit$finalModel,uniform=TRUE,main='Classification based on exercises') 
-text(modFit$finalModel,use.n=TRUE,all=TRUE,cex=0.8)
+plot(modRpart$finalModel,uniform=TRUE,main='Classification based on exercises') 
+text(modRpart$finalModel,use.n=TRUE,all=TRUE,cex=0.8)
 ```
 
 ```{r classification-fancy, cache=TRUE}
 # Use the fancy Rpart plot for a better visualization of the classification
-fancyRpartPlot(modFit$finalModel)
+fancyRpartPlot(modRpart$finalModel)
 ```
 
 
-# Predict with the test set
+# Check accuracy of model
 ```{r cache=TRUE}
-predictions <- predict(modFit,newdata=test)
-predictions
-
+val <- predict(modRpart,newdata=split$Fold3)
+confusionMatrix(val,split$Fold3$classe)
 ```
+
+# Drop Rpart classification
+It can be seen that the accuracy of teh Rpart is <0.5. Hence it is dropped
+
+# Use GBM for fitting the model
+```{r cache=TRUE}
+modFit <- train(classe ~ ., method="gbm",data= train,verbose=FALSE)
+modFit
+```
+
+# Check accuracy
+```{r cache=TRUE}
+val <- predict(modFit,newdata=split$Fold3)
+confusionMatrix(val,split$Fold3$classe)
+```
+
+# Pick gbm and use to predict test data
+```{r cache=TRUE}
+predictions <-predict(modFit,newdata=test)
+predictions
+```
+
+
 
 # Conclusion: 
 1. The training and the test set data were read from the CSV files
@@ -114,8 +149,12 @@ predictions
    a. For columns which have blanks remove elements. 
    b. For columns for which there are NA values remove the elements
    c. Remove all irrelevant columns e.g user_name, run_window which don't contribute to the outcome
-3. A classification CART model was used for the outcone 'classe' variable
-4. After cleaning the total number of predictors is 48
+3. The testing set is also cleaned like the training set
+4. A classification CART model was used for the outcone 'classe' variable
 5. A classification chart and a fancy Rpart plot is created
-6. The testing set is also cleaned like the training set
-7. Finally the predictions for the test set is computed and shown
+6. The train data was divided into 3 folds. Fold3 was used for cross-validation
+7. The model fitted by Rpart was validated for accuracy. This was around ~0.5
+8. The gbm model was used.
+9. Accuracy of this model was check again with the confusion Matrix. This is > 0.99
+10. Predictions is made with this model
+11. Finally the predictions for the test set is computed and shown

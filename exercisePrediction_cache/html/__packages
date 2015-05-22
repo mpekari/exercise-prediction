@@ -6,3 +6,6 @@ caret
 rattle
 rpart
 rpart.plot
+plyr
+survival
+gbm
