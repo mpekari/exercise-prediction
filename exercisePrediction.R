@@ -3,7 +3,7 @@ library(dplyr)
 library(caret)
 library(rattle)
 library(rpart.plot)
-library(gbm)
+library(randomForest)
 set.seed(6396)
 
 # Read the training and test data
@@ -71,14 +71,14 @@ confusionMatrix(val,split$Fold3$classe)
 dim(mytrain)
 dim(myvalidation)
 
-# Use Generalized boost regression model
-modFit <- train(classe ~ ., method="gbm",data= mytrain,verbose=FALSE)
+# Use Generalized Random Forest Model model
+modFit <- train(classe ~ ., method="rf",data= mytrain,verbose=FALSE)
 modFit
 
 val <- predict(modFit,newdata=myvalidation)
 confusionMatrix(val,myvalidation$classe)
 
-# Pick gbm and use to predict test data
+# Pick random forest and use to predict test data
 predict(modFit,newdata=test)
 
 
