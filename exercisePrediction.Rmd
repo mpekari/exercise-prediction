@@ -1,12 +1,14 @@
 ---
-title: Choosing Generalized Boosted Regression Model(GBM) over CART to fit a prediction model for exercise data
+title: Choosing Generalized Boosted Random Forest Regression Model(RF) over CART to fit a prediction model for exercise data
 author: "Tinniam V Ganesh"
 date: "Wednesday, May 20, 2015"
 output: html_document
 ---
 # Executive Summary 
-This project uses the Generalized Boosted Regression Model(GBM) over CART  to model classify the outcome variable based on the set of predictors. The data is read and then cleaned to remove all columns which have >97% of NAs or space character.The GBM model is used to classify the outcome based on the predictors.
-The training data is divided into 3 folds for cross validation. The predicted model is checked for accuracy using the Confusion Matrix. The final prediction for the test set is done with the GBM model
+This project uses the Random Forest  Regression Model(RF) over CART  to model classify the outcome variable based on the set of predictors. The data is read and then cleaned to remove all columns which have >97% of NAs or space character.The Random Forest model is used to classify the outcome based on the predictors.
+The cleaned  data is partitioned into training &  cross validation data. The predicted model is 
+checked for accuracy using the Confusion Matrix with the cross validation data. The final prediction for the test set is done with the Random Forest model
+
 Read the data from the CSV files. Create a vector of NA strings that include both blank spaces and
 NAs
 
@@ -17,7 +19,7 @@ library(ggplot2)
 library(caret)
 library(rattle)
 library(rpart.plot)
-library(gbm)
+library(randomForest)
 set.seed(6396)
 training <- read.csv("pml-training.csv",na.strings = c(NA,""))
 testing <- read.csv("pml-testing.csv",na.strings = c(NA,""))
@@ -42,7 +44,6 @@ test <- testing[,a]
 ```
 
 # Drop irrelevant columns from training and test
-## Drop all columns that don't have relevance to the outcome
 ```{r cache=TRUE}
 # Drop columns that don't have relevance from the training set
 train <- select(train, -X)
@@ -130,9 +131,9 @@ confusionMatrix(val,myvalidation$classe)
 # Drop Rpart classification
 It can be seen that the accuracy of teh Rpart is <0.5. Hence it is dropped
 
-# Use GBM for fitting the model
+# Use Random Forest for fitting the model
 ```{r cache=TRUE}
-modFit <- train(classe ~ ., method="gbm",data= mytrain,verbose=FALSE)
+modFit <- train(classe ~ ., method="rf",data= mytrain,verbose=FALSE)
 modFit
 ```
 
@@ -159,10 +160,9 @@ qplot(mytrain$pitch_forearm,mytrain$yaw_belt,color=mytrain$classe,data=mytrain)
 
 
 
-# Pick gbm and use to predict test data
+# Pick Random Forest (rf) and use to predict test data
 ```{r eval=FALSE}
 predictions <- predict(modFit,newdata=test)
-
 ```
 
 
@@ -178,7 +178,7 @@ predictions <- predict(modFit,newdata=test)
 5. A classification chart and a fancy Rpart plot is created
 6. The cleaned training data was partitioned into testing and cross0-validation ser
 7. The model fitted by Rpart was validated for accuracy. This was around ~0.5
-8. The gbm model was used.
-9. Accuracy of this model was check again with the confusion Matrix. This is > 0.95
+8. The Random Forest model was used.
+9. Accuracy of this model was check again with the confusion Matrix. This is > 0.994
 10. Predictions is made with this model
-11. Finally the predictions for the test set is computed and shown
+11. Finally the predictions for the test set is computed 
