@@ -110,23 +110,12 @@ modRpart <- train(classe ~ ., method="rpart",data= mytrain)
 modRpart
 ```
 
-# Plot the classification with plot and fancyRpartPlot
-```{r classfication-chart, cache=TRUE}
-plot(modRpart$finalModel,uniform=TRUE,main='Classification based on exercises') 
-text(modRpart$finalModel,use.n=TRUE,all=TRUE,cex=0.8)
-```
-
-```{r classification-fancy, cache=TRUE}
-# Use the fancy Rpart plot for a better visualization of the classification
-fancyRpartPlot(modRpart$finalModel)
-```
-
-
-# Check accuracy of model
+# Check accuracy of the Rpart model
 ```{r cache=TRUE}
 val <- predict(modRpart,newdata=myvalidation)
 confusionMatrix(val,myvalidation$classe)
 ```
+The accuracy can be seen to be <0.5
 
 # Drop Rpart classification
 It can be seen that the accuracy of teh Rpart is <0.5. Hence it is dropped
@@ -137,17 +126,14 @@ modFit <- train(classe ~ ., method="rf",data= mytrain,verbose=FALSE)
 modFit
 ```
 
-# Check accuracy
-```{r cache=TRUE}
-val <- predict(modFit,newdata=myvalidation)
-confusionMatrix(val,myvalidation$classe)
-```
 
-# Check the variable importance
-```{r cache=TRUE}
+
+# Check the accuracy of the Random Forest model
+```{r cache=FALSE}
 val <- predict(modFit,newdata=myvalidation)
 confusionMatrix(val,myvalidation$classe)
 ```
+The accuracy of Random Forest model is 0.992
 
 # Plot the top 3 variables of importance 
 ```{r plot1, cache= TRUE}
